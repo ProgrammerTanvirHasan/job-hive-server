@@ -1,0 +1,278 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/* ================= USER ================= */
+
+model User {
+  id    String @id @default(uuid())
+
+  name  String?
+  email String @unique
+
+  role   Role @default(USER)
+  status UserStatus @default(ACTIVE)
+
+  image         String?
+  emailVerified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs         Job[]
+  applications Application[]
+  payments     Payment[]
+  votes        Vote[]
+  comments     Comment[]
+  sessions     Session[]
+  accounts     Account[]
+
+  @@map("user")
+}
+
+
+model Job {
+  id Int @id @default(autoincrement())
+
+  title       String
+  description String
+  company     String
+  location    String
+  salary Int?
+
+
+  category String
+  
+
+  isPaid Boolean @default(false)
+  price  Float?
+
+  status JobStatus @default(PENDING)
+
+  requirements   String[]
+  qualifications String[]
+  benefits       String[]
+
+  rejectionReason String?
+  applyDeadline   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  applications Application[]
+  payments     Payment[]
+  votes        Vote[]
+  comments     Comment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+}
+
+/* ================= APPLICATION ================= */
+
+model Application {
+  id Int @id @default(autoincrement())
+
+  resume      String
+  coverLetter String?
+  status      ApplicationStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  jobId  Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
+}
+
+/* ================= PAYMENT ================= */
+
+model Payment {
+  id            Int     @id @default(autoincrement())
+  transactionId String  @unique
+
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @default("BDT")
+
+  status PaymentStatus @default(PENDING)
+
+  userId String
+  jobId  Int
+
+  gateway       String @default("SSLCommerz")
+  paymentMethod PaymentMethod?
+
+  valId           String?
+  isVerified      Boolean @default(false)
+  gatewayResponse Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jobId])
+}
+
+/* ================= VOTE ================= */
+
+model Vote {
+  id   Int @id @default(autoincrement())
+  type VoteType
+
+  userId String
+  jobId  Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([jobId])
+}
+
+/* ================= COMMENT ================= */
+
+model Comment {
+  id      Int    @id @default(autoincrement())
+  content String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId   String
+  jobId    Int
+  parentId Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  parent  Comment?  @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentThread")
+
+  @@index([jobId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+/* ================= SESSION ================= */
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+/* ================= ACCOUNT ================= */
+
+model Account {
+  id         String @id @default(cuid())
+  accountId  String
+  providerId String
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+/* ================= VERIFICATION ================= */
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+/* ================= ENUMS ================= */
+
+enum PaymentMethod {
+  BKASH
+  NAGAD
+  ROCKET
+  CARD
+}
+
+enum JobStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Role {
+  ADMIN
+  RECRUITER
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+  INACTIVE
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  SHORTLISTED
+  REJECTED
+}
+
+enum VoteType {
+  UP
+  DOWN
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELED
+}
