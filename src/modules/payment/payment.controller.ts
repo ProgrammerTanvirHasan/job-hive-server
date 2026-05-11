@@ -1,25 +1,24 @@
 import { Request, Response } from "express";
 import { paymentService } from "./payment.service";
 
-/* ================= INIT PAID APPLICATION ================= */
 const initPaidApplication = async (req: Request, res: Response) => {
   try {
     const userId = String(req.user?.id);
-    const { jobId, coverLetter } = req.body;
 
-    if (!req.file) {
+    const { jobId, coverLetter, resume } = req.body;
+
+   
+    if (!resume) {
       return res.status(400).json({
         success: false,
-        message: "Resume is required",
+        message: "Resume URL is required",
       });
     }
-
-    const resumePath = `/uploads/${req.file.filename}`;
 
     const url = await paymentService.initPaidApplication(
       userId,
       Number(jobId),
-      resumePath,
+      resume, 
       coverLetter || "",
     );
 
@@ -35,7 +34,6 @@ const initPaidApplication = async (req: Request, res: Response) => {
   }
 };
 
-/* ================= INIT ================= */
 const initPayment = async (req: Request, res: Response) => {
   try {
     const userId = String(req.user?.id);
@@ -55,14 +53,11 @@ const initPayment = async (req: Request, res: Response) => {
   }
 };
 
-/* ================= SUCCESS ================= */
-// SSLCommerz POSTs to success_url — tran_id/val_id come in req.body,
-// jobId comes from the query string we appended in success_url
 const success = async (req: Request, res: Response) => {
   try {
     const tran_id = (req.body?.tran_id || req.query?.tran_id) as string;
-    const val_id  = (req.body?.val_id  || req.query?.val_id)  as string;
-    const jobId   = (req.query?.jobId  || req.body?.jobId)    as string;
+    const val_id = (req.body?.val_id || req.query?.val_id) as string;
+    const jobId = (req.query?.jobId || req.body?.jobId) as string;
 
     await paymentService.paymentSuccess(tran_id, val_id);
 
@@ -74,8 +69,6 @@ const success = async (req: Request, res: Response) => {
   }
 };
 
-/* ================= FAIL ================= */
-// SSLCommerz POSTs to fail_url / cancel_url
 const fail = async (req: Request, res: Response) => {
   try {
     const tran_id = (req.body?.tran_id || req.query?.tran_id) as string;
@@ -90,7 +83,6 @@ const fail = async (req: Request, res: Response) => {
   }
 };
 
-/* ================= IPN ================= */
 const ipn = async (req: Request, res: Response) => {
   await paymentService.handleIPN(req.body);
   return res.send("OK");

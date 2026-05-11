@@ -2,36 +2,6 @@ import { Request, Response } from "express";
 import { applicationService } from "./application.service";
 import { applicationSchema } from "./validation";
 
-// const applyJob = async (req: Request, res: Response) => {
-//   try {
-//     const parsedData = applicationSchema.parse(req.body);
-
-//     const userId = req.user?.id;
-
-//     if (!userId) {
-//       return res.status(401).json({ message: "Unauthorized" });
-//     }
-
-//     const result = await applicationService.applyJob(
-//       userId,
-//       parsedData.jobId,
-//       parsedData.resume,
-//       parsedData.coverLetter,
-//     );
-
-//     return res.status(201).json({
-//       success: true,
-//       message: "Applied successfully",
-//       data: result,
-//     });
-//   } catch (error: any) {
-//     return res.status(400).json({
-//       success: false,
-//       message: error.message,
-//     });
-//   }
-// };
-
 const getApplications = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
@@ -78,23 +48,19 @@ const getNotAppliedJobs = async (req: Request, res: Response) => {
   }
 };
 
-const getApplicationsByJob = async (req: Request, res: Response) => {
+const getRecruiterApplicants = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    const jobId = Number(req.params.jobId);
     const role = req.user?.role;
 
     if (!userId || !role) {
       return res.status(401).json({
+        success: false,
         message: "Unauthorized",
       });
     }
 
-    const data = await applicationService.getApplicationsByJob(
-      userId,
-      jobId,
-      role,
-    );
+    const data = await applicationService.getRecruiterApplicants(userId, role);
 
     return res.status(200).json({
       success: true,
@@ -107,40 +73,41 @@ const getApplicationsByJob = async (req: Request, res: Response) => {
     });
   }
 };
-
 //.........................................................//
 
 const applyJob = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
+
     if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
 
-    const { jobId, coverLetter } = req.body;
+    const { jobId, coverLetter, resume } = req.body;
 
-    console.log("BODY:", req.body);
-    console.log("FILE:", req.file);
-
-    if (!req.file) {
-      return res.status(400).json({ message: "CV required" });
+    // ================= VALIDATION =================
+    if (!resume) {
+      return res.status(400).json({
+        success: false,
+        message: "Resume URL is required",
+      });
     }
-
-    // ✅ ALWAYS correct path
-    const resumePath = `/uploads/${req.file.filename}`;
 
     const result = await applicationService.applyJob(userId, Number(jobId), {
-      resume: resumePath,
-      coverLetter: coverLetter || "", 
+      resume,
+      coverLetter: coverLetter || "",
     });
 
-    res.json({
+    return res.json({
       success: true,
       message: "Application submitted successfully",
       data: result,
     });
   } catch (err: any) {
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
       message: err.message,
     });
@@ -206,7 +173,7 @@ const deleteApplication = async (req: Request, res: Response) => {
 export const applicationController = {
   deleteApplication,
   getApplications,
-  getApplicationsByJob,
+  getRecruiterApplicants,
   getNotAppliedJobs,
   applyJob,
   getApplicantsByJob,

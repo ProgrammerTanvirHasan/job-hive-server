@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { PaymentStatus } from "../../../generated/prisma";
 
 /* ================= INIT PAID APPLICATION ================= */
+
 const initPaidApplication = async (
   userId: string,
   jobId: number,
@@ -17,10 +18,10 @@ const initPaidApplication = async (
   if (!job) throw new Error("Job not found");
 
   if (!job.price || job.price <= 0) {
-    throw new Error("This is a free job - use regular apply endpoint");
+    throw new Error("This is a free job - use apply endpoint");
   }
 
-  /* ================= CHECK EXISTING APPLICATION ================= */
+  // ================= CHECK EXISTING APPLICATION =================
   const existingApp = await prisma.application.findUnique({
     where: {
       userId_jobId: { userId, jobId },
@@ -31,11 +32,11 @@ const initPaidApplication = async (
     throw new Error("You already applied to this job");
   }
 
-  /* ================= CHECK EXISTING PAYMENT ================= */
+  // ================= CHECK PAYMENT =================
   const existingPayment = await prisma.payment.findFirst({
     where: {
-      userId: String(userId),
-      jobId: Number(jobId),
+      userId,
+      jobId,
       status: PaymentStatus.SUCCESS,
     },
   });
@@ -44,18 +45,18 @@ const initPaidApplication = async (
     throw new Error("Already paid for this job");
   }
 
-  /* ================= CREATE APPLICATION ================= */
+  // ================= CREATE APPLICATION (PENDING) =================
   const application = await prisma.application.create({
     data: {
       userId,
       jobId,
-      resume,
+      resume, // ✅ Cloudinary URL
       coverLetter: coverLetter || "",
       status: "PENDING",
     },
   });
 
-  /* ================= CREATE PAYMENT & GET GATEWAY URL ================= */
+  // ================= CREATE PAYMENT =================
   const transactionId = `TXN_${randomUUID()}`;
 
   const user = await prisma.user.findUnique({
@@ -74,6 +75,7 @@ const initPaidApplication = async (
     },
   });
 
+  // ================= SSL PAYLOAD =================
   const data = {
     store_id: process.env.SSL_STORE_ID,
     store_passwd: process.env.SSL_STORE_PASSWORD,
@@ -113,10 +115,10 @@ const initPaidApplication = async (
   const gatewayURL = sslRes.data?.GatewayPageURL;
 
   if (!gatewayURL) {
-    // Rollback application if payment init fails
     await prisma.application.delete({
       where: { id: application.id },
     });
+
     throw new Error("Payment gateway failed");
   }
 

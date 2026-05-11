@@ -37,25 +37,20 @@ const getNotAppliedJobs = async (userId: string) => {
 
   return jobs;
 };
-const getApplicationsByJob = async (
-  userId: string,
-  jobId: number,
-  role: Role,
-) => {
-  const job = await prisma.job.findUnique({
-    where: { id: jobId },
-  });
-
-  if (!job) throw new Error("Job not found");
-
-  if (role !== Role.ADMIN && job.userId !== userId) {
+const getRecruiterApplicants = async (userId: string, role: Role) => {
+  if (role !== Role.RECRUITER && role !== Role.ADMIN) {
     throw new Error("Not authorized");
   }
 
   return prisma.application.findMany({
-    where: { jobId },
+    where: {
+      job: {
+        userId: userId, // 👈 recruiter owns job
+      },
+    },
     include: {
       user: true,
+      job: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -63,7 +58,16 @@ const getApplicationsByJob = async (
   });
 };
 //...................................................//
-const applyJob = async (userId: string, jobId: number, data: any) => {
+
+const applyJob = async (
+  userId: string,
+  jobId: number,
+  data: {
+    resume: string;
+    coverLetter?: string;
+  },
+) => {
+  // ================= CHECK EXISTING =================
   const exist = await prisma.application.findUnique({
     where: {
       userId_jobId: { userId, jobId },
@@ -74,18 +78,18 @@ const applyJob = async (userId: string, jobId: number, data: any) => {
     throw new Error("You already applied to this job");
   }
 
+  // ================= CREATE APPLICATION =================
   return prisma.application.create({
     data: {
       userId,
       jobId,
-      resume: data.resume, // ✅ correct path
-      coverLetter: data.coverLetter ?? "", // ✅ NEVER NULL
+      resume: data.resume, // Cloudinary URL
+      coverLetter: data.coverLetter || "",
+      status: "PENDING",
     },
   });
 };
-
 const getApplicantsByJob = async (recruiterId: string, jobId: number) => {
-  // ✅ Step 1: check job ownership
   const job = await prisma.job.findUnique({
     where: { id: jobId },
   });
@@ -142,7 +146,7 @@ const deleteApplication = async (userId: string, id: number) => {
 export const applicationService = {
   applyJob,
   getApplications,
-  getApplicationsByJob,
+  getRecruiterApplicants,
   getNotAppliedJobs,
   getApplicantsByJob,
   deleteApplication,
