@@ -88,7 +88,9 @@ model Application {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+ interviewDate      DateTime?
 
+  recruiterMessage   String?
   userId String
   jobId  Int
 
@@ -263,6 +265,7 @@ enum ApplicationStatus {
   REVIEWED
   SHORTLISTED
   REJECTED
+   INTERVIEW
 }
 
 enum VoteType {

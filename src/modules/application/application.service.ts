@@ -1,6 +1,10 @@
 import { Role } from "../../../generated/prisma";
 import { prisma } from "../../lib/prisma";
-
+interface ScheduleInterviewPayload {
+  status: string;
+  interviewDate: string;
+  message: string;
+}
 const getApplications = async (userId: string) => {
   return prisma.application.findMany({
     where: { userId },
@@ -122,6 +126,38 @@ const getApplicantsByJob = async (recruiterId: string, jobId: number) => {
   return applicants;
 };
 
+const scheduleInterviewService = async (
+  applicationId: number,
+  payload: ScheduleInterviewPayload,
+) => {
+  const { status, interviewDate, message } = payload;
+
+  const existingApplication = await prisma.application.findUnique({
+    where: {
+      id: applicationId,
+    },
+  });
+
+  if (!existingApplication) {
+    throw new Error("Application not found");
+  }
+
+  // Update application
+
+  const updatedApplication = await prisma.application.update({
+    where: {
+      id: applicationId,
+    },
+
+    data: {
+      status,
+      interviewDate: new Date(interviewDate),
+      recruiterMessage: message,
+    },
+  });
+
+  return updatedApplication;
+};
 const deleteApplication = async (userId: string, id: number) => {
   // 1️⃣ Find application
   const application = await prisma.application.findUnique({
@@ -150,4 +186,5 @@ export const applicationService = {
   getNotAppliedJobs,
   getApplicantsByJob,
   deleteApplication,
+  scheduleInterviewService,
 };

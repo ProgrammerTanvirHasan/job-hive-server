@@ -40,6 +40,12 @@ router.get(
   authMiddleware(Role.RECRUITER),
   applicationController.getRecruiterApplicants,
 );
+
+router.patch(
+  "/schedule-interview/:id",
+  authMiddleware(Role.RECRUITER),
+  applicationController.scheduleInterviewController,
+);
 router.delete(
   "/:id",
   authMiddleware(Role.USER),

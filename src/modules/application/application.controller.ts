@@ -140,6 +140,33 @@ const getApplicantsByJob = async (req: Request, res: Response) => {
   }
 };
 
+const scheduleInterviewController = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const { status, interviewDate, message } = req.body;
+
+    const result = await applicationService.scheduleInterviewService(Number(id), {
+      status,
+      interviewDate,
+      message,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Interview scheduled successfully",
+      data: result,
+    });
+  } catch (error: any) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to schedule interview",
+    });
+  }
+};
+
 const deleteApplication = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
@@ -177,4 +204,5 @@ export const applicationController = {
   getNotAppliedJobs,
   applyJob,
   getApplicantsByJob,
+  scheduleInterviewController,
 };
