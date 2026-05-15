@@ -1,4 +1,4 @@
-import { Role } from "../../../generated/prisma";
+import { ApplicationStatus, Role } from "../../../generated/prisma";
 import { prisma } from "../../lib/prisma";
 interface ScheduleInterviewPayload {
   status: string;
@@ -150,7 +150,7 @@ const scheduleInterviewService = async (
     },
 
     data: {
-      status,
+      status: ApplicationStatus.INTERVIEW,
       interviewDate: new Date(interviewDate),
       recruiterMessage: message,
     },
